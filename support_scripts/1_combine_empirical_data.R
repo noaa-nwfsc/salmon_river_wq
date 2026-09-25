@@ -1,9 +1,8 @@
-
 # Read in and combine empirical data from site sensors
 
 
 # Read all individual site files
-files <- dir("all_data/SalmonEnvData")
+files <- dir("all_data/SalmonEnvData/WQ2026")
 files <- files[grep(".csv",files)]
 
 alldata <- NULL
@@ -18,9 +17,8 @@ summary(alldata)
 alldata <- alldata[!is.na(alldata$Temperature),]
 alldata$Site.name[alldata$Site.name == "Bear Valley/Elk Creek"] <- "Bear Valley Creek"
 alldata$Site.name[alldata$Site.name == "Big Creek (lower)/Rush Creek"] <- "Big Creek (lower)"
+alldata$Site.name[alldata$Site.name == "Taylor Ranch"] <- "Big Creek (lower)"
 alldata$Site.name[alldata$Site.name == "South Fork Salmon"] <- "South Fork Salmon River"
-alldata$Site.name[alldata$Site.name == "Taylor Ranch"] <- "Big Creek (lower)/Rush Creek"
-
 
 # Read in the compiled dataset to date
 obs_temps_hourly <- readr::read_csv("all_data/salmon_environmental_data.csv")
