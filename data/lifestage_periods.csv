@@ -1,15 +1,16 @@
-LHS_Code,Species,Lifestage,Activity,Trib_outmigration,Location,Month_day_begin,Year_begin,Julian_begin,Month_day_end,Year_end,Julian_end,Pref_hi,Pref_lo,Thresh_hi,Thresh_lo,Regulatory,Temp_Source
-AMS,Chinook,adult,migration,,Snake River,15-Apr,0,105,31-Jul,0,212,15,7,20,4,22,EPA Region 10 Guidance (2003); Richter & Kolmes (2005)
-AMM,Chinook,adult,migration,,mainstem,1-May,0,121,14-Aug,0,226,15,7,20,4,22,EPA Region 10 Guidance (2003); Richter & Kolmes (2005)
-AHT,Chinook,adult,holding,,natal tributary,15-Jun,0,166,31-Aug,0,243,12,6,15,4,13,McCullough et al. (2001); Bell (1991)
-AST,Chinook,adult,spawning,,natal tributary,1-Aug,0,213,30-Sep,0,273,13,6,14,4,13,IDAPA 58.01.02; Bjornn & Reiser (1991)
-EIT,Chinook,egg,incubating,,natal tributary,15-Aug,0,227,31-May,1,151,10,4,13,2,13,McCullough et al. (2001); Richter & Kolmes (2005)
-PRFT,Chinook,parr,rearing,fall,natal tributary,15-Apr,1,227,31-Aug,1,243,16,10,19,4,16,Myrick & Cech (2004); EPA Region 10 (2003)
-SOFM,Chinook,smolt,outmigrating,fall,mainstem,1-Aug,1,213,30-Sep,1,273,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
-SOFS,Chinook,smolt,outmigrating,fall,Snake River,15-Sep,1,258,14-Jul,2,195,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
-PRWT,Chinook,parr,rearing,winter,natal tributary,15-Apr,1,105,30-Jan,2,31,16,10,19,4,16,Myrick & Cech (2004); EPA Region 10 (2003)
-SOWM,Chinook,smolt,outmigrating,winter,mainstem,1-Nov,1,305,14-Apr,2,104,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
-SOWS,Chinook,smolt,outmigrating,winter,Snake River,15-Mar,2,74,30-Jun,2,181,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
-PRST,Chinook,parr,rearing,spring,natal tributary,15-Apr,1,105,14-Apr,2,104,16,10,19,4,16,Myrick & Cech (2004); EPA Region 10 (2003)
-SOSM,Chinook,smolt,outmigrating,spring,mainstem,1-Mar,2,60,31-May,2,151,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
-SOSS,Chinook,smolt,outmigrating,spring,Snake River,15-Apr,2,105,14-Jun,2,165,15,10,17,4,18,Myrick & Cech (2001); McCullough et al. (2001)
+Species,LifeHistory,Description,Lifestage,MD_begin,Year_begin,MD_end,Year_end,Thresh_hi,Thresh_lo
+Chinook,fall_outmigrants,upriver migration and spawning,prespawn,1-Jun,0,30-Nov,0,20,4
+Chinook,fall_outmigrants,egg incubation,incubat,15-Aug,0,30-Jun,1,13,4
+Chinook,fall_outmigrants,freshwater rearing (natal),rearing,15-Apr,0,31-Oct,0,18,9
+Chinook,fall_outmigrants,fry or parr outmigration (fork),outmigr0,1-Aug,0,30-Mar,1,18,9
+Chinook,fall_outmigrants,parr or smolt outmigration (mstem),outmigr1,15-Feb,1,15-Jul,2,18,9
+Chinook,win_outmigrants,upriver migration and spawning,prespawn,1-Jun,0,30-Nov,0,20,4
+Chinook,win_outmigrants,egg incubation,incubat,15-Aug,0,30-Jun,1,13,4
+Chinook,win_outmigrants,freshwater rearing (natal),rearing,15-Apr,0,31-Jan,1,18,9
+Chinook,win_outmigrants,fry or parr outmigration (fork),outmigr0,1-Nov,0,15-Apr,1,18,9
+Chinook,win_outmigrants,parr or smolt outmigration (mstem),outmigr1,15-Mar,1,30-Jun,2,18,9
+Chinook,spr_outmigrants,upriver migration and spawning,prespawn,1-Jun,0,30-Nov,0,20,4
+Chinook,spr_outmigrants,egg incubation,incubat,15-Aug,0,30-Jun,1,13,4
+Chinook,spr_outmigrants,freshwater rearing (natal),rearing,15-Apr,0,30-Apr,1,18,9
+Chinook,spr_outmigrants,fry or parr outmigration (fork),outmigr0,1-Mar,1,30-May,1,18,9
+Chinook,spr_outmigrants,parr or smolt outmigration (mstem),outmigr1,15-Apr,1,15-Jun,2,18,9
