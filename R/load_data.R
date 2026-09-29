@@ -14,7 +14,7 @@ daily_data <- qs2::qs_read("data/daily_data.qs2")
 
 # thermal metrics
 lifestages <- read.csv("data/lifestage_periods.csv")
-metrics.obs <- read.csv("data/thermal_metrics_empirical_filtered.csv")
+metrics.obs <- read.csv("data/thermal_metrics_empirical.csv")
 metrics.obs <- dplyr::left_join(metrics.obs, sites[, c("SiteCode", "River_km")], by = "SiteCode")
 
 
