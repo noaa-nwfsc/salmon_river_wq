@@ -47,7 +47,7 @@ fnc_compute_metrics <- function(emp.dt,
     date_max = as.Date(character()), doy_max = numeric(), date_min = as.Date(character()), doy_min = numeric(),
     days_above_thresh = numeric(), days_below_thresh = numeric(),
     degree_days = numeric(), cumulative_heat = numeric(), days_in_range = numeric(),
-    exceed_1st = as.Date(character()),
+    exceed_1st = as.Date(character()), exceed_1st_doy = numeric(),
     max_consec_above = numeric(), median_consec_above = numeric(), n_heat_events = numeric(),
     max_daily_increase = numeric(),
     min_7d = numeric(), mean_7d = numeric(), max_7d = numeric(),
@@ -108,6 +108,7 @@ fnc_compute_metrics <- function(emp.dt,
         idx <- which(s >= sustain_count)
         if (length(idx) > 0) exceed_first <- as.IDate(dtv[idx[1]])
       }
+      exceed_1st_doy <- lubridate::yday(exceed_first)
 
       vs <- ifelse(!is.na(v) & v > combo$Thresh_hi, 1L, 0L)
       r2 <- rle(vs)
@@ -146,6 +147,7 @@ fnc_compute_metrics <- function(emp.dt,
         days_above_thresh = as.numeric(days_above_thresh), days_below_thresh = as.numeric(days_below_thresh),
         degree_days = as.numeric(degree_days), cumulative_heat = as.numeric(cumulative_heat), days_in_range = as.numeric(days_in_range),
         exceed_1st = as.numeric(as.Date(as.character(exceed_first)), units = "secs"),
+        exceed_1st_doy = as.numeric(exceed_1st_doy),
         max_consec_above = as.numeric(max_consec_above), median_consec_above = as.numeric(median_consec_above), n_heat_events = as.numeric(n_heat_events),
         max_daily_increase = as.numeric(max_daily_increase),
         min_7d = as.numeric(min_7d), mean_7d = as.numeric(mean_7d), max_7d = as.numeric(max_7d),

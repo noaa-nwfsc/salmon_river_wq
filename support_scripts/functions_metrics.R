@@ -1,300 +1,143 @@
-# Functions
+# Thermal metrics functions
 
-# CORE function
-fncComputeMetrics <- function(stdata, species, lh = lh, year.range, st.col, site.col, date.col){
-  data.out <- NULL
-  for(sp in species){
-  for(l in lh){
-    lhist <- lifestages[lifestages$Species %in% sp & lifestages$LifeHistory %in% l,]
-    life.stages <- lhist$Lifestage
-    for(ls in life.stages){
-      for(yy in year.range){
-        
-        st_md <- lhist$MD_begin[lhist$Lifestage == ls]
-        st_y <- yy + lhist$Year_begin[lhist$Lifestage == ls]
-        stdate <- as.Date(paste0(st_y, "-", st_md), format = "%Y-%d-%b")
-        en_md <- lhist$MD_end[lhist$Lifestage == ls]
-        en_y <- yy + lhist$Year_end[lhist$Lifestage == ls]
-        endate <- as.Date(paste0(en_y, "-", en_md), format = "%Y-%d-%b")
-        rm(st_md, st_y, en_md, en_y)
-        
-        thresh.hi <- lhist$Thresh_hi[lhist$Lifestage == ls]
-        thresh.lo <- lhist$Thresh_lo[lhist$Lifestage == ls]
-        
-        # limit to the stream reaches for this species and life stage
-        #if(length(grep("migr", ls)) > 0){
-        #  use <- "Presence"
-        #} else if(ls == "rearing"){
-        #  use <- "Rearing"
-        #} else if(length(grep("spawn", ls)) > 0 | ls == "incubat"){ 
-        #  use <- "Spawning" #upriver migration, holding, spawning, and incubation
-        #}
-        #
-        # sp2 <- switch(sp,
-        #               "Chinook" = "Chinook Salmon",
-        #               "steelhead" = "Steelhead Trout",
-        #               "bull trout" = "Bull Trout")
-        # #"sockeye" = "Sockeye Salmon",
-        # #"rainbow" = "Rainbow Trout")
-        # 
-        # if(!is.null(sp2)){ #will be NA for 'generic' monthly
-        #   cids <- swifd$COMID[swifd$SPECIES %in% sp2 & swifd$USETYPE_DE %in% use]
-        #   # https://geo.wa.gov/datasets/wdfw::statewide-washington-integrated-fish-distribution/explore
-        #   data2use <- stdata[stdata$COMID %in% cids,]
-        # } else {
-        #   data2use <- stdata
-        # }
-        
-        data2use <- stdata
-        
-        # if reaches to process, proceed:
-        if(nrow(data2use) > 0){
+library(data.table)
+library(slider)
+library(lubridate)
 
-          # high temp frequency: proportion of days with temps > threshold
-          met1 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_pDays.Unsuitable, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh.hi, sign = "GT")
-          # high temp duration: longest consecutive stretch with temps > threshold
-          met2 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_Cum.Days.Unsuitable, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh.hi, sign = "GT")
-          # timing, first week too high
-          met3 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_1stWk.Unsuitable, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh.hi, sign = "GT")
-          # duration within suitable thermal range
-          met4 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_Days.in.Range, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh.hi, YY = thresh.lo)
-          # cumulative exposure, ie degree-days
-          met5 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_Cum.Exposure, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate)
-          # variability
-          met6 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_Variance, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate)
-          if(any(is.na(met6))){idx <- which(is.na(met6));for(i in idx){met6[[i]] <- rep(NA, 5)}}
-          met6 <- t(abind::abind(met6, along = 2))
-          colnames(met6) <- c("IWV", "AWV", "MWV", "VAR", "RNG")
-          # weekly min/mean/max
-          met7 <- lapply(X = unique(data2use[,site.col]), FUN = fnc_Weekly, frame = data2use, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate)
-          if(any(is.na(met7))){idx <- which(is.na(met7));for(i in idx){met7[[i]] <- rep(NA, 6)}}
-          met7 <- t(abind::abind(met7, along = 2))
-          colnames(met7) <- c("IWI", "AWA", "MWA", "AWM", "MWM", "AWI")
-          
-          dat <- data.frame("SiteCode" = unique(data2use[,site.col]), "pExc" = unlist(met1), "durExc" = unlist(met2), "first.week" = unlist(met3), "daysSuitable" = unlist(met4),
-                            "cum.exp" = unlist(met5), met6, met7,
-                            "Species" = sp, "LifeHistory" = l, "Life.stage" = ls, "Start" = stdate, "End" = endate, "Thresh.hi" = thresh.hi, "Thresh.lo" = thresh.lo, "year" = yy)
-          colnames(dat)[1] <- site.col
-          dat <- dat[!is.na(dat$AWA),]
-          data.out <- rbind(data.out, dat)
-          rm(met1, met2, met3, met4, met5, met6, met7)
-        } # end if data
-      } # end year range
-    } # end life stage
-    } # end life history
-  } # end species
-  data.out$first.week <- as.Date(data.out$first.week)
-  data.out <- data.out[!is.na(data.out$AWA),]
+# Main wrapper: accepts data.table or data.frame input and returns a data.table
+fnc_compute_metrics <- function(stdata,
+                                species = "Chinook",
+                                lsc = "AMS",
+                                year_range = NULL,
+                                st_col = "value",
+                                site_col = "SiteCode",
+                                date_col = "Date",
+                                n_threads = data.table::getDTthreads()){
+  # set data.table threads
+  data.table::setDTthreads(n_threads)
+
+  # Standardize input to data.table (work on a copy)
+  if (!data.table::is.data.table(stdata)) st_dt <- data.table::as.data.table(stdata) else st_dt <- data.table::copy(stdata)
+
+  # Ensure required columns exist and have expected names
+  site_nm <- rlang::as_name(rlang::ensym(site_col))
+  date_nm <- rlang::as_name(rlang::ensym(date_col))
+  st_nm <- rlang::as_name(rlang::ensym(st_col))
+
+  if (!site_nm %in% names(st_dt)) stop("site column not found in stdata: ", site_nm)
+  if (!date_nm %in% names(st_dt)) stop("date column not found in stdata: ", date_nm)
+  if (!st_nm %in% names(st_dt)) stop("value column not found in stdata: ", st_nm)
+
+  # normalize column names to SiteCode/Date/value for internal processing
+  if (site_nm != "SiteCode") data.table::setnames(st_dt, site_nm, "SiteCode")
+  if (date_nm != "Date") data.table::setnames(st_dt, date_nm, "Date")
+  if (st_nm != "value") data.table::setnames(st_dt, st_nm, "value")
+
+  # ensure Date class
+  st_dt[, Date := as.Date(Date)]
+
+  # build combos (species × year × life stage)
+  combos <- expand.grid(Species = species, LHS_Code = lsc, Year = year_range, stringsAsFactors = FALSE)
+  combos <- as.data.table(combos)
+  combos <- merge(combos, periodicity, by.x = c("Species","LHS_Code"), by.y = c("Species","LHS_Code"), all.x = TRUE)
+  combos[, Start := as.Date(paste0(Year + Year_begin, "-", Month_day_begin), format = "%Y-%d-%b")]
+  combos[, End := as.Date(paste0(Year + Year_end, "-", Month_day_end), format = "%Y-%d-%b")]
+  combos <- combos[, .(Species, LHS_Code, Year, Start, End, Pref_hi, Pref_lo, Thresh_hi, Thresh_lo)]
+  combos <- unique(combos)
+
   
-  return(data.out)
+  # compute metrics grouped by combo
+  res_dt <- overlaps[ , {
+    ord <- order(Date)
+    Date_ord <- Date[ord]
+    val <- value[ord]
+
+    n_days <- as.integer(as.numeric(End[1] - Start[1]) + 1)
+    days_obs <- sum(!is.na(val))
+    days_missing <- sum(is.na(val))
+    prop_missing <- mean(is.na(val))
+    longest_na_gap <- {r <- rle(is.na(val)); if(all(!r$values)) 0L else max(r$lengths[r$values], na.rm = TRUE)}
+    longest_na_gap_prop <- ifelse(n_days > 0, longest_na_gap / n_days, NA_real_)
+    missingness_score <- prop_missing + longest_na_gap_prop
+
+    temp_mean <- mean(val, na.rm = TRUE)
+    temp_sd <- sd(val, na.rm = TRUE)
+    temp_var <- var(val, na.rm = TRUE)
+    temp_range <- ifelse(all(is.na(val)), NA_real_, max(val, na.rm = TRUE) - min(val, na.rm = TRUE))
+    q05 <- as.numeric(quantile(val, 0.05, na.rm = TRUE, names = FALSE))
+    q25 <- as.numeric(quantile(val, 0.25, na.rm = TRUE, names = FALSE))
+    q50 <- as.numeric(quantile(val, 0.50, na.rm = TRUE, names = FALSE))
+    q75 <- as.numeric(quantile(val, 0.75, na.rm = TRUE, names = FALSE))
+    q95 <- as.numeric(quantile(val, 0.95, na.rm = TRUE, names = FALSE))
+
+    date_max <- if(all(is.na(val))) as.Date(NA) else Date_ord[which.max(val)]
+    doy_max <- if(!is.na(date_max)) as.numeric(lubridate::yday(date_max)) else NA_real_
+    date_min <- if(all(is.na(val))) as.Date(NA) else Date_ord[which.min(val)]
+    doy_min <- if(!is.na(date_min)) as.numeric(lubridate::yday(date_min)) else NA_real_
+
+    days_above_thresh <- sum(!is.na(val) & val > Thresh_hi[1], na.rm = TRUE)
+    days_below_thresh <- sum(!is.na(val) & val < Thresh_lo[1], na.rm = TRUE)
+    degree_days <- sum(pmax(val - 0, 0), na.rm = TRUE)
+    cumulative_heat <- sum(pmax(val - Thresh_hi[1], 0), na.rm = TRUE)
+
+    days_in_range <- sum(!is.na(val) & val > Thresh_lo[1] & val < Thresh_hi[1], na.rm = TRUE)
+
+    exceed_1st <- metric_first_week_exceed(Date_ord, val, Thresh_hi[1])
+
+    vs <- ifelse(!is.na(val) & val > Thresh_hi[1], 1L, 0L)
+    r <- rle(vs)
+    max_consec_above <- if(all(r$values == 0)) 0L else max(r$lengths[r$values == 1], na.rm = TRUE)
+    runs <- r$lengths[r$values == 1]
+    median_consec_above <- if(length(runs) == 0) 0L else as.integer(median(runs))
+    n_heat_events <- sum(r$values & r$lengths >= 3, na.rm = TRUE)
+
+    diffs <- if(length(val) < 2) NA_real_ else diff(val)
+    max_daily_increase <- if(all(is.na(diffs))) NA_real_ else max(diffs, na.rm = TRUE)
+
+    # single-pass sliding series using slider::slide_index_dbl (calendar 7-day windows)
+    roll_min <- slider::slide_index_dbl(val, Date_ord, ~min(.x, na.rm = TRUE), .before = 6, .complete = TRUE)
+    roll_mean <- slider::slide_index_dbl(val, Date_ord, ~mean(.x, na.rm = TRUE), .before = 6, .complete = TRUE)
+    roll_max <- slider::slide_index_dbl(val, Date_ord, ~max(.x, na.rm = TRUE), .before = 6, .complete = TRUE)
+    roll_range <- roll_max - roll_min
+
+    min_7d <- if(all(is.na(roll_min))) NA_real_ else min(roll_min, na.rm = TRUE)
+    mean_7d <- if(all(is.na(roll_mean))) NA_real_ else mean(roll_mean, na.rm = TRUE)
+    max_7d <- if(all(is.na(roll_max))) NA_real_ else max(roll_max, na.rm = TRUE)
+    mean_7d_min <- if(all(is.na(roll_min))) NA_real_ else mean(roll_min, na.rm = TRUE)
+    mean_7d_max <- if(all(is.na(roll_max))) NA_real_ else mean(roll_max, na.rm = TRUE)
+    min_7d_mean <- if(all(is.na(roll_mean))) NA_real_ else min(roll_mean, na.rm = TRUE)
+    max_7d_mean <- if(all(is.na(roll_mean))) NA_real_ else max(roll_mean, na.rm = TRUE)
+    median_weekly_range <- if(all(is.na(roll_range))) NA_real_ else median(roll_range, na.rm = TRUE)
+
+    .(n_days = n_days, days_obs = days_obs, days_missing = days_missing, prop_missing = prop_missing,
+      longest_na_gap = longest_na_gap, longest_na_gap_prop = longest_na_gap_prop, missingness_score = missingness_score,
+      temp_mean = temp_mean, temp_sd = temp_sd, temp_var = temp_var, temp_range = temp_range,
+      q05 = q05, q25 = q25, q50 = q50, q75 = q75, q95 = q95,
+      date_max = date_max, doy_max = doy_max, date_min = date_min, doy_min = doy_min,
+      days_above_thresh = days_above_thresh, days_below_thresh = days_below_thresh,
+      degree_days = degree_days, cumulative_heat = cumulative_heat,
+      days_in_range = days_in_range, exceed_1st = exceed_1st,
+      max_consec_above = max_consec_above, median_consec_above = median_consec_above, n_heat_events = n_heat_events,
+      max_daily_increase = max_daily_increase,
+      min_7d = min_7d, mean_7d = mean_7d, max_7d = max_7d, mean_7d_min = mean_7d_min,
+      mean_7d_max = mean_7d_max, min_7d_mean = min_7d_mean, max_7d_mean = max_7d_mean,
+      median_weekly_range = median_weekly_range)
+
+  }, by = .(Species, LifeHistory, Lifestage, Year, Start, End, Thresh_hi, Thresh_lo, SiteCode)]
+
+  # Ensure combos with no observations are still present (NA metrics)
+  out_dt <- merge(combos_expanded, res_dt, by = c("Species","LifeHistory","Lifestage","Year","Start","End","Thresh_hi","Thresh_lo","SiteCode"), all.x = TRUE)
+
+  return(out_dt)
 }
 
-# Set up data frame
-fnc_Setup <- function(frame, site, st.col, site.col, date.col, start.date, end.date, show.na = T){
-  # sort and subset
-  frame <- frame[frame[, site.col] == site,]
-  frame <- frame[frame[, date.col] >= start.date & frame[,date.col] <= end.date,]
-  frame <- frame[order(frame[, date.col]),]
-  
-  # identify missing data
-  datelist.all <- seq.Date(from = start.date, to = end.date, by = 1)
-  datelist <- sort(unique(frame[, date.col]))
-  na.datelist <- as.Date(setdiff(datelist.all, datelist))
-  if(show.na){cat("There are", length(na.datelist),"missing days out of a total of", length(datelist.all), 
-                  "(", round(length(na.datelist)/length(datelist.all)*100,2), "%)\n")}
-  prop.missing <- length(na.datelist)/length(datelist.all)
-  
-  if(prop.missing < 0.2){ #proceed only if there are no more than 20% missing data
-    return(frame)
-  } else {
-    return(frame[0,])
-  }
+# Helper: first week with sustained exceedance (7-day window)
+metric_first_week_exceed <- function(date, value, thresh){
+  if (length(date) == 0) return(as.Date(NA))
+  df_date <- as.Date(date)
+  exceed <- ifelse(!is.na(value) & value > thresh, 1L, 0L)
+  sums <- slider::slide_index_int(exceed, df_date, ~sum(.x, na.rm = TRUE), .before = 6, .complete = TRUE)
+  idx <- which(sums > 0)
+  if(length(idx) == 0) return(as.Date(NA))
+  return(df_date[min(idx)])
 }
-
-# Weekly Metrics
-fnc_Weekly <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    if(any(!is.na(frame[,st.col]))){
-      stlist <- frame[,st.col]
-      minlist <- meanlist <- maxlist <- rep(0, (length(datelist) - 6))
-      for (i in 1:(length(datelist) - 6)){
-        if(any(!is.na(stlist[i:(i + 6)]))){
-          minlist[i] <- min(stlist[i:(i + 6)], na.rm = T)
-          meanlist[i] <- mean(stlist[i:(i + 6)], na.rm = T)
-          maxlist[i] <- max(stlist[i:(i + 6)], na.rm = T)
-        } else {minlist[i] <- meanlist[i] <- maxlist[i] <- NA}
-      }
-      iwit <- min(minlist, na.rm = T) # minimum weekly minimum
-      awat <- mean(meanlist, na.rm = T) # average weekly average
-      mwat <- max(meanlist, na.rm = T) # maximum weekly average
-      awmt <- mean(maxlist, na.rm = T) # average weekly maximum; this is 7DADM
-      mwmt <- max(maxlist, na.rm = T) # maximum weekly maximum
-      awit <- mean(minlist, na.rm = T) # average weekly minimum
-      
-      out <- c(iwit, awat, mwat, awmt, mwmt, awit)
-      names(out) <- c("IWI", "AWA", "MWA", "AWM", "MWM", "AWI")
-      return(out)	
-    }
-  } else{ return (NA)}
-}
-
-# Variance Metrics
-fnc_Variance <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    if(any(!is.na(frame[,st.col]))){
-      stlist <- frame[,st.col]
-      varlist <- rep(0, (length(datelist) - 6))
-      for (i in 1:(length(datelist) - 6)){
-        if(any(!is.na(stlist[i:(i + 6)]))){
-          varlist[i] <- var(stlist[i:(i + 6)], na.rm = T)
-        } else {varlist[i] <- NA}
-      }
-      iwv <- min(varlist, na.rm = T) # minimum weekly variance
-      if(is.na(iwv) | is.infinite(iwv)) iwv <- NA
-      awv <- mean(varlist, na.rm = T) # average weekly variance
-      if(is.na(awv) | is.infinite(awv)) awv <- NA
-      mwv <- max(varlist, na.rm = T) # maximum weekly variance
-      if(is.na(mwv) | is.infinite(mwv)) mwv <- NA
-      var <- var(stlist, na.rm = T) # raw variance
-      rng <- range(stlist, na.rm = T)[2] - range(stlist, na.rm = T)[1] #range of raw variance
-      
-      out <- c(iwv, awv, mwv, var, rng)
-      names(out) <- c("IWV", "AWV", "MWV", "VAR", "RNG")
-      return(out)	
-    }
-  } else{ return (NA)}
-}
-
-# No. of days with values above or below a threshold 
-fnc_pDays.Unsuitable <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    period <- as.numeric(end.date - start.date) + 1    
-    if(any(!is.na(frame[,st.col]))){
-      if(sign == "GT"){
-        dayslist <- frame[!is.na(frame[, st.col]) & frame[, st.col] >= XX,]
-      } else if(sign == "LT"){
-        dayslist <- frame[!is.na(frame[, st.col]) & frame[, st.col] <= XX,]
-      }
-      
-      return(length(unique(dayslist[, date.col]))/period)
-    }
-  } else{ return (NA)}
-}
-
-# The first week to sustain values above or below a threshold
-fnc_1stWk.Unsuitable <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    #for each day in datelist, count number of records above XX degrees
-    daysabovelist <- rep(0, length(datelist))
-    XXlist = rep(0, (length(datelist) - 6))
-    for (i in 1:length(datelist)){
-      if(sign == "GT"){
-        daysabovelist[i] <- sum(frame[frame[, date.col] == datelist[i], st.col] > XX, na.rm = T) 
-      } else if(sign == "LT") {
-        daysabovelist[i] <- sum(frame[frame[, date.col] == datelist[i], st.col] < XX, na.rm = T) 
-      }
-    }
-    for (i in 1:(length(datelist) - 6)){
-      XXlist[i] <- sum(daysabovelist[i:(i + 6)])
-    }
-    
-    if(any(XXlist > 0)){
-      return(datelist[which.max(XXlist)])
-    } else{ return (as.Date("1900-01-01"))}
-    
-  } else{ return (as.Date("1900-01-01"))}
-}
-
-# Date at which cumulative exposure surpasses or goes below a threshold
-fnc_Date.Unsuitable <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    cumexp <- 0; i = 1
-    if(sign == "GT"){
-      while(cumexp < XX & i <= length(datelist)){
-        cumexp <- sum(cumexp, frame[frame[, date.col] == datelist[i], st.col], na.rm = T) 
-        i <- i + 1
-      }
-      if(cumexp > XX) return(datelist[i]) else return (as.Date("1900-01-01"))
-    } else if(sign == "LT"){
-      while(cumexp > XX & i <= length(datelist)){
-        cumexp <- sum(cumexp, frame[frame[, date.col] == datelist[i], st.col], na.rm = T) 
-        i <- i + 1
-      }
-      if(cumexp < XX) return(datelist[i]) else return (as.Date("1900-01-01"))
-    }
-    
-  } else{ return (as.Date("1900-01-01"))}
-}
-
-# Cumulative exposure (for temperature, this is degrees-days)
-fnc_Cum.Exposure <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    
-    cumexp <- aggregate(frame[,st.col], list(frame[,site.col]), sum, na.rm = T)
-    cumexp[,2] <- cumexp[,2]
-    colnames(cumexp) <- c("Site", st.col)
-    
-    return(cumexp[, st.col])
-  } else{ return (NA)}
-}
-
-# Cumulate days in unsuitable range
-fnc_Cum.Days.Unsuitable <- function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    
-    if(sign == "GT"){
-      # Find indices where values exceed threshold
-      exceed_indices <- which(frame[,st.col] > XX)
-      
-    } else if(sign == "LT"){
-      # Find indices where values exceed threshold
-      exceed_indices <- which(frame[,st.col] < XX)
-    }
-    
-    # Calculate consecutive durations of exceedances
-    consecutive_durations <- rle(exceed_indices)$lengths
-    longest_duration <- sum(consecutive_durations)
-    
-    return(longest_duration)
-  } else {return(0)}
-}
-
-#No. of days with temperatures within temperature range XX to YY during facet period
-fnc_Days.in.Range = function(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = stdate, end.date = endate, XX = thresh, YY, sign = "GT"){
-  
-  frame <- fnc_Setup(frame = frame, site, st.col = st.col, site.col = site.col, date.col = date.col, start.date = start.date, end.date = end.date, show.na = F)
-  
-  if(nrow(frame) > 0){
-    datelist <- sort(unique(frame[, date.col]))
-    frame <- frame[!is.na(frame[,st.col]),]
-    return(round(nrow(frame[frame[,st.col] >= YY & frame[,st.col] <= XX,]) ))
-  } else {return(0)}
-}
-

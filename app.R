@@ -67,28 +67,51 @@ filters_ts.obs <- sidebar(
     width = 370,
     span("Thermal metrics are summaries of empirical stream temperature  that summarize thermal conditions 
         experienced by Chinook salmon at a monitored location over time periods associated with different life stages.", 
-        br(), br(), "Select filters from the menu to investigate thermal conditions over time and distance.
-        Note that spawning and incubation periods are shared across life history strategies, hence results only differ for rearing.", 
+        br(), br(), "Select filters from the menu to investigate thermal conditions over time and distance.", 
         style = "font-size: 14px; color: gray"),
-    selectInput(inputId = "lifehist.met.obs", label = "Life History Strategy:",
-                choices = c("fall_outmigrants", "win_outmigrants", "spr_outmigrants"),
-                selected = "spr_outmigrants"),
-    selectInput(inputId = "lifestage.met.obs", label = "Life stage:",
-                choices = c("Prespawn" = "prespawn", "Incubation" = "incubat", 
-                            "Rearing" = "rearing"),
-                selected = "rearing"),
+    selectInput(inputId = "lifehist.met.obs", label = "Strategy/Stage:",
+                choices = c(
+                  "Adults Holding in Tributary" = "AHT",
+                  "Adults Spawning in Tributary" = "AST",
+                  "Eggs Incubating in Tributary" = "EIT",
+                  "Fall-migrant Parr Rearing in Tributary" = "PRFT",
+                  "Winter-migrant Parr Rearing in Tributary" = "PRWT",
+                  "Spring-migrant Parr Rearing in Tributary" = "PRST"
+                ),
+                selected = "EIT"),
     selectInput(inputId = "metric.met.obs", label = "Thermal metric:",
-                choices = c("Proportion of days exceeding threshold" = "pExc", 
-                            "Days consecutively exceeding threshold" = "durExc", 
-                            #"First week exceeding threshold" = "first.week", 
-                            "Days within suitable range" = "daysSuitable",
-                            "Cumulative exposure in degree-days" = "cum.exp", 
-                            "Minimum weekly minimum" = "IWI", "Mean weekly minimum" = "AWI",
-                            "Mean weekly mean" = "AWA", "Maximum weekly mean" = "MWA", 
-                            "Mean weekly maximum" = "AWM", "Maximum weekly maximum" = "MWM", 
-                            "Minimum weekly variance" = "IWV", "Mean weekly variance" = "AWV", 
-                            "Maximum weekly variance" = "MWV", "Raw variance" = "VAR", "Range" = "RNG"),
-                selected = "AWA"),
+                choices = c(
+                  "Mean temperature" = "temp_mean",
+                  "SD of temperature" = "temp_sd",
+                  "Variance of temperature" = "temp_var",
+                  "Range of temperature" = "temp_range",
+                  "5th Percentile of temperature" = "q05",
+                  "25th Percentile of temperature" = "q25",
+                  "50th Percentile of temperature" = "q50",
+                  "75th Percentile of temperature" = "q75",
+                  "95th Percentile of temperature" = "q95",
+                  "Day of maximum temperature" = "doy_max",
+                  "Day of minimum temperature" = "doy_min",
+                  "Days above a threshold value" = "days_above_thresh",
+                  "Days below a threshold value" = "days_below_thresh",
+                  "Degree days" = "degree_days",
+                  "Cumulative heat" = "cumulative_heat",
+                  "Days within suitable range" = "days_in_range",
+                  "Date first exceeded" = "exceed_1st_doy",
+                  "Max consecutive days above threshold" = "max_consec_above",
+                  "Median consecutive days above threshold" = "median_consec_above",
+                  "Number of heat events (above threshold)" = "n_heat_events",
+                  "Max daily increase in temperature" = "max_daily_increase",
+                  "Minimum weekly temperature" = "min_7d",
+                  "Mean weekly temperature" = "mean_7d",
+                  "Maximum weekly temperature" = "max_7d",
+                  "Mean of weekly average minimum" = "mean_7d_min",
+                  "Mean of weekly average maximum" = "mean_7d_max",
+                  "Min of weekly average mean" = "min_7d_mean",
+                  "Max of weekly average mean" = "max_7d_mean",
+                  "Median weekly range" = "median_weekly_range"
+                ),
+                selected = "mean_7d"),
     selectInput(inputId = "site.met.obs", label = "Highlight a site on the bottom plot:",
                 choices = c(NA, sort(unique(sites$SiteCode[sites$hasdata > 365*3]))), 
                 selected = NA),
@@ -217,9 +240,9 @@ filters_ts.obs <- sidebar(
        DTOutput("metric_defs.met.obs"),
        card_footer(
          span("'Year_begin' and 'Year_end' are the year bookends for describing the life stage, where 0 is the spawning year, 1 is the calendar 
-         year after spawning, and 2 is the following calendar year. 'MD_begin' and 'MD_end' are analogous: these are the month and day at
-         the beginning and end of the life stage. 'Thresh_hi' and 'Thresh_lo' are 'thresholds' (degrees C) referred to in certain metric calculations.
-         Lifestage-specific thresholds appear as dashed blue (lower) and red (upper) thresholds on some plots.", 
+         year after spawning, and 2 is the following calendar year. 'Month_Day_begin' and 'Month_Day_end' are analogous: these are the month and day at
+         the beginning and end of the life stage. 'Pref_hi' and 'Pref_lo' (preferred range), and Thresh_hi' and 'Thresh_lo' (suitable range) are 'thresholds' 
+         (degrees C) referred to in certain metric calculations. Lifestage-specific thresholds appear as dashed blue (lower) and red (upper) thresholds on some plots.", 
          style = "font-size:12px; color: gray")
        )
     )
@@ -545,21 +568,10 @@ server <- function(input, output, session) {
   
 # Tab with observed metrics ----
 
-  # Make drop-down choice of year life stages upon user input of life history
-  metric.lifestage = reactive({
-    if(input$lifehist.met.obs == "generic") {
-      as.character(lubridate::month(1:12, label = T))
-    } else {
-      c("Prespawn" = "prespawn", "Incubation" = "incubat",
-        "Rearing" = "rearing")
-    }
-  })
-
   # Make drop-down choice of sites to highlight match life history and life stage selected
   metric.site = reactive({
       lh <- input$lifehist.met.obs
-      ls <- input$lifestage.met.obs
-      c(NA, sort(unique(metrics.obs$SiteCode[metrics.obs$LifeHistory %in% lh & metrics.obs$Life.stage %in% ls])))
+      c(NA, sort(unique(metrics.obs$SiteCode[metrics.obs$LHS_Code %in% lh])))
   })
 
   observeEvent(input$lifehist.met.obs, {
@@ -569,36 +581,30 @@ server <- function(input, output, session) {
     updateSelectInput(session, "site.met.obs", choices = metric.site())
   })
 
-#################################################################
-  # Could make these metrics calculated on the fly... would need some work:
-  #
-  # emp.data <- obs_temps[, c("Date", "SiteCode", "COMID", "AvgDailyTemp")]
-  # emp.data <- as.data.frame(emp.data[!is.na(emp.data$AvgDailyTemp),])
-  # year.range <- sort(unique(1900 + as.POSIXlt(emp.data$Date)$year))
-  # emp.out <- fncComputeMetrics(stdata = emp.data, species = species, lh = lh, year.range = year.range, 
-  #                              st.col = "AvgDailyTemp", site.col = "SiteCode", date.col = "Date")
-#################################################################
+#####################################################################
+  # Could make these metrics calculated on the fly... might be slow
+#####################################################################
 
   updateData.met.obs.yr <- reactive({
     lh <- input$lifehist.met.obs
-    ls <- input$lifestage.met.obs
     met <- input$metric.met.obs
 
-    mdat <- metrics.obs[metrics.obs$Life.stage %in% ls & metrics.obs$LifeHistory %in% lh, c("SiteCode", "year", "River_km", met)]
+    mdat <- metrics.obs[metrics.obs$LHS_Code %in% lh, c("SiteCode", "Year", "River_km", met)]
+    mdat <- mdat[!is.na(mdat[,met]),]
 
     if(nrow(mdat) > 0){
-      dat <- mdat %>% group_by(year) %>% summarise(q = list(quantile(.data[[met]],
+      dat <- mdat %>% group_by(Year) %>% summarise(q = list(quantile(.data[[met]],
              probs = c(0,0.1, 0.25, 0.5, 0.75, 0.9, 1), na.rm = T))) %>% unnest_wider(q)
-      colnames(dat) <- c("year", "Min", "Q10", "Q25", "Q50", "Q75", "Q90", "Max")
+      colnames(dat) <- c("Year", "Min", "Q10", "Q25", "Q50", "Q75", "Q90", "Max")
       setDT(mdat)
       # Count unique sites per year
-      sites.per.year <- mdat[, .(NoSites = uniqueN(SiteCode)), by = year]
-      dat <- dplyr::left_join(dat, sites.per.year, by = "year")
+      sites.per.year <- mdat[, .(NoSites = uniqueN(SiteCode)), by = Year]
+      dat <- dplyr::left_join(dat, sites.per.year, by = "Year")
       dat <- as.data.frame(dat)
       mdat <- as.data.frame(mdat)
 
       # check for missing data
-      if(nrow(dat) == 0 & nrow(dat) > 0) {dat <- as.data.frame(matrix(0, nrow = 1, ncol = ncol(dat))); colnames(dat) = colnames(dat)}
+      if(nrow(dat) == 0) {dat <- as.data.frame(matrix(0, nrow = 1, ncol = ncol(dat))); colnames(dat) = colnames(dat)}
 
       return(list(dat, mdat))
     }
@@ -607,18 +613,18 @@ server <- function(input, output, session) {
 
   updateData.met.obs.km <- reactive({
     lh <- input$lifehist.met.obs
-    ls <- input$lifestage.met.obs
     met <- input$metric.met.obs
 
-    mdat <- metrics.obs[metrics.obs$Life.stage %in% ls & metrics.obs$LifeHistory %in% lh, c("SiteCode", "year", "River_km", met)]
-
+    mdat <- metrics.obs[metrics.obs$LHS_Code %in% lh, c("SiteCode", "Year", "River_km", met)]
+    mdat <- mdat[!is.na(mdat[,met]),]
+    
     if(nrow(mdat) > 0){
       dat <- mdat %>% group_by(SiteCode) %>% summarise(q = list(quantile(.data[[met]],
              probs = c(0,0.1, 0.25, 0.5, 0.75, 0.9, 1), na.rm = T))) %>% unnest_wider(q)
       colnames(dat) <- c("SiteCode", "Min", "Q10", "Q25", "Q50", "Q75", "Q90", "Max")
       setDT(mdat)
       # Count unique years per SiteCode
-      years.per.site <- mdat[, .(NoYears = uniqueN(year)), by = SiteCode]
+      years.per.site <- mdat[, .(NoYears = uniqueN(Year)), by = SiteCode]
       dat <- dplyr::left_join(dat, years.per.site, by = "SiteCode")
       dat <- as.data.frame(dat)
       mdat <- as.data.frame(mdat)
@@ -628,7 +634,7 @@ server <- function(input, output, session) {
         dat <- dat[,c(colnames(dat)[1:8], "River_km", "NoYears")] #rename as function expects
 
       # check for missing data
-      if(nrow(dat) == 0 & nrow(dat) > 0) {dat <- as.data.frame(matrix(0, nrow = 1, ncol = ncol(dat))); colnames(dat) = colnames(dat)}
+      if(nrow(dat) == 0) {dat <- as.data.frame(matrix(0, nrow = 1, ncol = ncol(dat))); colnames(dat) = colnames(dat)}
 
       return(list(dat, mdat))
     }
@@ -637,13 +643,12 @@ server <- function(input, output, session) {
 
   updatePlot.met.obs.yr <- reactive({
     lh <- input$lifehist.met.obs
-    ls <- input$lifestage.met.obs
     met <- input$metric.met.obs
 
     df <- updateData.met.obs.yr()[[1]]
 
     if(!is.null(df)){
-      fncPlotData(dat = df, lh = lh, ls = ls, xvar = "year", mn.lab = paste0(lh, ", ", ls), ylb = fncMetricName(met), xlb = "Year", met = met)
+      fncPlotData(dat = df, lh = lh, xvar = "Year", mn.lab = lh, ylb = fncMetricName(met), xlb = "Year", met = met)
     } else{
       plot.new()
       text(x = 0.5, y = 0.5, cex = 1.2, labels = "No data available for the current selection.")
@@ -653,14 +658,13 @@ server <- function(input, output, session) {
 
   updatePlot.met.obs.km <- reactive({
     lh <- input$lifehist.met.obs
-    ls <- input$lifestage.met.obs
     met <- input$metric.met.obs
     si <- input$site.met.obs
 
     df <- updateData.met.obs.km()[[1]]
 
     if(!is.null(df)){
-      fncPlotData(dat = df, lh = lh, ls = ls, xvar = "River_km", si = si, mn.lab = paste0(lh, ", ", ls), ylb = fncMetricName(met), xlb = "River kilometer", met = met)
+      fncPlotData(dat = df, lh = lh, xvar = "River_km", si = si, mn.lab = lh, ylb = fncMetricName(met), xlb = "River kilometer", met = met)
     } else{
       plot.new()
       text(x = 0.5, y = 0.5, cex = 1.2, labels = "No data available for the current selection.")
@@ -670,20 +674,21 @@ server <- function(input, output, session) {
 
   output$plot.year.met.obs <- renderPlot({
     updatePlot.met.obs.yr()
-  }) %>% bindCache(input$lifehist.met.obs, input$lifestage.met.obs, input$metric.met.obs, input$site.met.obs)
+  }) %>% bindCache(input$lifehist.met.obs, input$metric.met.obs, input$site.met.obs)
 
   output$plot.rkm.met.obs <- renderPlot({
     updatePlot.met.obs.km()
-  }) %>% bindCache(input$lifehist.met.obs, input$lifestage.met.obs, input$metric.met.obs, input$site.met.obs)
+  }) %>% bindCache(input$lifehist.met.obs, input$metric.met.obs, input$site.met.obs)
 
   output$metric_defs.met.obs <- renderDT({
-    table_data <- lifestages[lifestages$LifeHistory %in% input$lifehist.met.obs & lifestages$Lifestage %in% c("prespawn", "incubat", "rearing"),]
+    lh_codes <- unique(lifestages$LHS_Code)[-grep("^S", unique(lifestages$LHS_Code))]
+    table_data <- lifestages[lifestages$LHS_Code %in% lh_codes,]
     datatable(table_data,
     options = list(dom = 't'), rownames= F)
   })
 
   output$download.met.obs <- downloadHandler(
-    filename = function(){paste0(input$lifehist.met.obs, "_", input$lifestage.met.obs, "_", input$metric.met.obs, ".csv")},
+    filename = function(){paste0(input$lifehist.met.obs, "_", input$metric.met.obs, ".csv")},
     content = function(fname){
       write.csv(updateData.met.obs.yr()[[2]], fname, row.names = FALSE)
     }

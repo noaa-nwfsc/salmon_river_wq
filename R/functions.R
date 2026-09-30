@@ -1,6 +1,6 @@
 # Functions ----
 
-fncPlotData <- function(dat, lh, ls, xvar, y10 = "Q10", y50 = "Q50", y90 = "Q90",
+fncPlotData <- function(dat, lh, xvar, y10 = "Q10", y50 = "Q50", y90 = "Q90",
                         xlb = xvar, ylb = "", mn.lab = met, met = met, si = NA){
   options(warn = -1) #suppress warnings
   
@@ -42,11 +42,11 @@ fncPlotData <- function(dat, lh, ls, xvar, y10 = "Q10", y50 = "Q50", y90 = "Q90"
     points(x, y, cex = z * cx, pch = 21, bg = "darkred")
   }
 
-  #Add optimal range ablines
-   if(met %in% c("RNG", "IWI", "AWA", "MWA", "AWM", "MWM", "AWI")){
-    abline(h = lifestages$Thresh_lo[lifestages$LifeHistory %in% lh & lifestages$Lifestage %in% ls], col = 4, lty = 3, lwd = 2)
-    abline(h = lifestages$Thresh_hi[lifestages$LifeHistory %in% lh & lifestages$Lifestage %in% ls], col = 2, lty = 3, lwd = 2)
-   }
+  ##Add optimal range ablines
+  # if(met %in% c("RNG", "IWI", "AWA", "MWA", "AWM", "MWM", "AWI")){
+  #  abline(h = lifestages$Thresh_lo[lifestages$LifeHistory %in% lh & lifestages$Lifestage %in% ls], col = 4, lty = 3, lwd = 2)
+  #  abline(h = lifestages$Thresh_hi[lifestages$LifeHistory %in% lh & lifestages$Lifestage %in% ls], col = 2, lty = 3, lwd = 2)
+  # }
   
   # legend
   mx <- round(max(dat[,var]))
@@ -71,23 +71,37 @@ fncPlotData <- function(dat, lh, ls, xvar, y10 = "Q10", y50 = "Q50", y90 = "Q90"
 }
 
 fncMetricName <- function(metric = met){
-  if(metric == "pExc") return ("Proportion of days exceeding threshold")
-  if(metric == "durExc") return ("Days consecutaviley exceeding threshold")
-  if(metric == "first.week") return ("First week exceeding threshold")
-  if(metric == "daysSuitable") return ("Days within suitable range (4C to threshold)")
-  if(metric == "cum.exp") return("Cumulative exposure in degree-days")
-  if(metric == "IWI") return ("Minimum weekly minimum")
-  if(metric == "AWI") return ("Mean weekly minimum")
-  if(metric == "AWA") return ("Mean weekly mean")
-  if(metric == "MWA") return ("Maximum weekly mean")
-  if(metric == "AWM") return ("Mean weekly maximum")
-  if(metric == "MWM") return ("Maximum weekly maximum")
-  if(metric == "IWV") return ("Minimum weekly variance")
-  if(metric == "AWV") return ("Mean weekly variance")
-  if(metric == "MWV") return ("Maximum weekly variance")
-  if(metric == "VAR") return ("Raw variance")
-  if(metric == "RNG") return ("Range")
+  if(metric == "temp_mean") return("Mean temperature")
+  if(metric == "temp_sd") return("SD of temperature")
+  if(metric == "temp_var") return("Variance of temperature")
+  if(metric == "temp_range") return("Range of temperature")
+  if(metric == "q05") return("5th Percentile of temperature")
+  if(metric == "q25") return("25th Percentile of temperature")
+  if(metric == "q50") return("50th Percentile of temperature")
+  if(metric == "q75") return("75th Percentile of temperature")
+  if(metric == "q95") return("95th Percentile of temperature")
+  if(metric == "doy_max") return("Day of maximum temperature")
+  if(metric == "doy_min") return("Day of minimum temperature")
+  if(metric == "days_above_thresh") return("Days above a threshold value")
+  if(metric == "days_below_thresh") return("Days below a threshold value")
+  if(metric == "degree_days") return("Degree days")
+  if(metric == "cumulative_heat") return("Cumulative heat")
+  if(metric == "days_in_range") return("Days within suitable range")
+  if(metric == "exceed_1st_doy") return("Date first exceeded")
+  if(metric == "max_consec_above") return("Max consecutive days above threshold")
+  if(metric == "median_consec_above") return("Median consecutive days above threshold")
+  if(metric == "n_heat_events") return("Number of heat events (above threshold)")
+  if(metric == "max_daily_increase") return("Max daily increase in temperature")
+  if(metric == "min_7d") return("Minimum weekly temperature")
+  if(metric == "mean_7d") return("Mean weekly temperature")
+  if(metric == "max_7d") return("Maximum weekly temperature")
+  if(metric == "mean_7d_min") return("Mean of weekly average minimum")
+  if(metric == "mean_7d_max") return("Mean of weekly average maximum")
+  if(metric == "min_7d_mean") return("Min of weekly average mean")
+  if(metric == "max_7d_mean") return("Max of weekly average mean")
+  if(metric == "median_weekly_range") return("Median weekly range")
 }
+
 
 fncClrs <- function(x, mi, mx, clnm){
   color_palette <- brewer.pal(7, clnm)

@@ -89,6 +89,15 @@ if ('Year' %in% names(emp.out.dt)) emp.out.dt[, Year := as.integer(Year)]
 # Filter to rows with <20% missing data
 emp.out.filtered <- emp.out.dt[prop_missing < 0.2]
 
+# Apply some other fixes
+emp.out.filtered$exceed_1st_doy <- lubridate::yday(as.Date(emp.out.filtered$exceed_1st))
+emp.out.filtered$mean_7d_min[is.infinite(emp.out.filtered$mean_7d_min)] <- NA
+emp.out.filtered$mean_7d_max[is.infinite(emp.out.filtered$mean_7d_max)] <- NA
+
+# Filter to only life stages / life history strategies occurring in tributaries (where empirical stream temp data are recorded)
+vars <- c("AHT", "AST", "EIT", "PRFT", "PRST", "PRWT")
+emp.out.filtered <- emp.out.filtered[emp.out.filtered$LHS_Code %in% vars,]
+
 # ensure output directory exists and write out (use project-relative path)
 out_dir <- 'salmon_river_wq/data'
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
