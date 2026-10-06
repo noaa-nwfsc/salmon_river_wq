@@ -39,8 +39,8 @@ filters_ts.obs <- sidebar(
   # Select based on samples in a set of years
   sliderInput(inputId = "year_slider_ts.obs",
               label = "Years when data are available:",
-              min = 1993, max = 2023,
-              value = c(1993, 2023),
+              min = 1993, max = 2026,
+              value = c(1993, 2026),
               step = 1,
               sep = ""),
   # Select based on River km
@@ -81,35 +81,45 @@ filters_ts.obs <- sidebar(
                 selected = "EIT"),
     selectInput(inputId = "metric.met.obs", label = "Thermal metric:",
                 choices = c(
-                  "Mean temperature" = "temp_mean",
-                  "SD of temperature" = "temp_sd",
-                  "Variance of temperature" = "temp_var",
-                  "Range of temperature" = "temp_range",
+                  # Magnitude
+                  "Mean temperature" = "met_mean",
                   "5th Percentile of temperature" = "q05",
                   "25th Percentile of temperature" = "q25",
                   "50th Percentile of temperature" = "q50",
                   "75th Percentile of temperature" = "q75",
                   "95th Percentile of temperature" = "q95",
-                  "Day of maximum temperature" = "doy_max",
-                  "Day of minimum temperature" = "doy_min",
-                  "Days above a threshold value" = "days_above_thresh",
-                  "Days below a threshold value" = "days_below_thresh",
-                  "Degree days" = "degree_days",
-                  "Cumulative heat" = "cumulative_heat",
-                  "Days within suitable range" = "days_in_range",
-                  "Date first exceeded" = "exceed_1st_doy",
-                  "Max consecutive days above threshold" = "max_consec_above",
-                  "Median consecutive days above threshold" = "median_consec_above",
-                  "Number of heat events (above threshold)" = "n_heat_events",
-                  "Max daily increase in temperature" = "max_daily_increase",
-                  "Minimum weekly temperature" = "min_7d",
-                  "Mean weekly temperature" = "mean_7d",
-                  "Maximum weekly temperature" = "max_7d",
+                  "Minimum weekly temperature" = "min_7d_min",
+                  "Mean weekly temperature" = "mean_7d_mean",
+                  "Maximum weekly temperature" = "max_7d_max",
                   "Mean of weekly average minimum" = "mean_7d_min",
                   "Mean of weekly average maximum" = "mean_7d_max",
                   "Min of weekly average mean" = "min_7d_mean",
                   "Max of weekly average mean" = "max_7d_mean",
-                  "Median weekly range" = "median_weekly_range"
+                  # Variance
+                  "SD of temperature" = "met_sd",
+                  "Variance of temperature" = "met_var",
+                  "Range of temperature" = "met_range",
+                  "Median weekly range" = "median_weekly_range",
+                  "Max daily increase in temperature" = "max_daily_increase",
+                  # Timing
+                  "Day of maximum temperature" = "doy_max",
+                  "Day of minimum temperature" = "doy_min",
+                  "Week first exceeded" = "exceed_1st_week",
+                  "First week below threshold" = "below_1st_week",
+                  # Frequency
+                  "Days above a threshold value" = "days_above",
+                  "Days below a threshold value" = "days_below",
+                  "Days within suitable range" = "days_in_range",
+                  "Number of heat events (above threshold)" = "n_heat_events",
+                  # Duration
+                  "Max consecutive in preferred range" = "max_consec_inrange",
+                  "Mean consecutive in preferred range" = "mean_consec_inrange",
+                  "Max consecutive days above threshold" = "max_consec_above",
+                  "Mean consecutive days above threshold" = "mean_consec_above",
+                  "Max consecutive days below threshold" = "max_consec_below",
+                  "Mean consecutive days below threshold" = "mean_consec_below",
+                  "Degree days" = "degree_days",
+                  "Cumulative heat" = "cumulative_heat"
                 ),
                 selected = "mean_7d"),
     selectInput(inputId = "site.met.obs", label = "Highlight a site on the bottom plot:",
@@ -582,7 +592,7 @@ server <- function(input, output, session) {
   })
 
 #####################################################################
-  # Could make these metrics calculated on the fly... might be slow
+  # Could calculate these metrics on the fly... might be slow
 #####################################################################
 
   updateData.met.obs.yr <- reactive({
