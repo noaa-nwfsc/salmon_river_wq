@@ -34,11 +34,14 @@ cat('Loaded observed temperature data: nrows =', nrow(obs_full), '\n')
 # Life stages and species ----
 species <- "Chinook"
 periodicity <- fread("salmon_river_wq/data/lifestage_periods.csv")
-lhs <- unique(periodicity$LHS_Code)
+#lhs <- unique(periodicity$LHS_Code)
+# Include only life stages / life history strategies occurring in tributaries (where empirical stream temp data are recorded)
+lhs <- c("AHT", "AST", "EIT", "PRFT", "PRST", "PRWT")
 cat('Life stages to process:', paste(lhs, collapse = ', '), '\n')
 
 # Empirical dataset: select and clean
 emp.dt <- obs_full[, .(Date, SiteCode, AvgDailyTemp)]
+#emp.dt <- obs_full[, .(Date, SiteCode, AvgWaterDepth)]
 setorderv(emp.dt, c('SiteCode','Date'))
 
 # Get range of years
@@ -52,9 +55,6 @@ cat('Setting data.table threads to', n_threads, '\n')
 data.table::setDTthreads(n_threads)
 
 # Compute metrics (fnc_compute_metrics defined in thermal_metrics_functions.R)
-# ensure periodicity table and lhs are loaded
-periodicity <- fread("salmon_river_wq/data/lifestage_periods.csv")
-lhs <- unique(periodicity$LHS_Code)
 
 start <- Sys.time()
 emp.out.dt <- fnc_compute_metrics(
@@ -64,6 +64,7 @@ emp.out.dt <- fnc_compute_metrics(
   species = species,
   year_range = year_range,
   st_col = "AvgDailyTemp",
+  #st_col = "AvgWaterDepth",
   site_col = "SiteCode",
   date_col = "Date",
   days_window = 7,
@@ -74,7 +75,7 @@ emp.out.dt <- fnc_compute_metrics(
 emp.out.dt <- as.data.table(emp.out.dt)
 
 # Normalize column types: dates -> Date, numeric columns -> numeric
-date_cols <- intersect(c('date_max','date_min','exceed_1st','Start','End'), names(emp.out.dt))
+date_cols <- intersect(c('Start','End'), names(emp.out.dt))
 for (c in date_cols) emp.out.dt[, (c) := as.Date(get(c))]
 # coerce remaining non-id columns to numeric where appropriate
 id_cols <- c('Species','LHS_Code','SiteCode','Year')
@@ -90,21 +91,18 @@ if ('Year' %in% names(emp.out.dt)) emp.out.dt[, Year := as.integer(Year)]
 emp.out.filtered <- emp.out.dt[prop_missing < 0.2]
 
 # Apply some other fixes
-emp.out.filtered$exceed_1st_doy <- lubridate::yday(as.Date(emp.out.filtered$exceed_1st))
 emp.out.filtered$mean_7d_min[is.infinite(emp.out.filtered$mean_7d_min)] <- NA
 emp.out.filtered$mean_7d_max[is.infinite(emp.out.filtered$mean_7d_max)] <- NA
-
-# Filter to only life stages / life history strategies occurring in tributaries (where empirical stream temp data are recorded)
-vars <- c("AHT", "AST", "EIT", "PRFT", "PRST", "PRWT")
-emp.out.filtered <- emp.out.filtered[emp.out.filtered$LHS_Code %in% vars,]
+emp.out.filtered$mean_7d_mean[is.infinite(emp.out.filtered$mean_7d_mean)] <- NA
 
 # ensure output directory exists and write out (use project-relative path)
 out_dir <- 'salmon_river_wq/data'
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-out_file <- file.path(out_dir, 'thermal_metrics_empirical_filtered.csv')
+out_file <- file.path(out_dir, 'thermal_metrics_empirical.csv')
+#out_file <- file.path(out_dir, 'depth_metrics_empirical.csv')
 
 fwrite(emp.out.filtered, file = out_file)
 cat('Wrote output to', out_file, '\n')
 end <- Sys.time()
 cat('Elapsed: ', format(end - start), '\n')
-#metrics <- fread('salmon_river_wq/data/thermal_metrics_empirical_filtered.csv')
+#metrics <- fread('salmon_river_wq/data/thermal_metrics_empirical.csv')
