@@ -31,8 +31,28 @@ for(i in 1:length(mets)) {
   ggsave(filename = paste0("salmon_river_wq/outputs/metric_plot_", met, ".png"), plot = p, width = 7, height = 7)
 }
 
+metrics <- fread('salmon_river_wq/data/depth_metrics_empirical.csv')
+names(metrics)
+# Ensure Year is integer
+metrics[, Year := as.integer(Year)]
 
+mets <- c("q05", "q50", "q95", "min_7d_min", "mean_7d_mean", "max_7d_max", 
+ "met_sd", "median_weekly_range", "max_7d_week", "min_7d_week")
 
+for(i in 1:length(mets)) {
+  met <- mets[i]
+  cat("Plotting metric:", met, "\n")
+  p <- ggplot(metrics, aes(x = Year, y = .data[[met]], color = LHS_Code, group = LHS_Code)) +
+    geom_point(alpha = 0.6, size = 0.8, na.rm = TRUE) +
+    geom_smooth(method = "lm", se = TRUE, na.rm = TRUE) +
+    facet_wrap(~ SiteCode, scales = "free_y") +
+    labs(y = met) +
+    theme_minimal() +
+    theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p)
+  ggsave(filename = paste0("salmon_river_wq/outputs/metric_depth_", met, ".png"), plot = p, width = 7, height = 7)
+}
 
 ##################### other stuff to explore #####
 
